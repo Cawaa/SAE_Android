@@ -3,6 +3,35 @@
 
 # Projet SAÉ 4 - R4.11 Dév. mobile
 
+## Arborescence du projet : 
+
+## 📁 Architecture du projet
+
+```plaintext
+app/src/main/java/dev/mobile/tpsae/
+│
+├── data/
+│   ├── MovieRepository.kt      # Gestion des appels API
+│   └── TmdbApi.kt              # Configuration du client Ktor
+│
+├── model/
+│   └── Movie.kt                # Classes de données (Movie, MovieResponse)
+│
+├── viewmodel/
+│   └── MainViewModel.kt        # Logique métier et état de l’UI
+│
+├── ui/
+│   ├── components/
+│   │   └── MovieComponents.kt  # Composants UI réutilisables (cards, search bar)
+│   │
+│   ├── screens/
+│   │   └── MovieListScreen.kt  # Écran principal (liste des films)
+│   │
+│   ├── MainActivity.kt         # Activité principale
+│   └── DetailActivity.kt       # Écran de détail
+│
+└── ui/theme/                   # Thème Material (couleurs, typographie, shapes)
+```
 
 
 Le but de cette SAÉ est de développer une application Android native (*déployable sur une machine de l'iut*) par sous-équipe de projet SAÉ (2-3 étudiants ; normalement 2 sous-équipes par équipe de SAÉ).
