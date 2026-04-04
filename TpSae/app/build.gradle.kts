@@ -4,13 +4,13 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.kotlin.serialization)
+    // Plugin permettant l'annotation @Parcelize pour passer des objets entre activités
+    id("kotlin-parcelize")
 }
 
 android {
     namespace = "dev.mobile.tpsae"
-    compileSdk {
-        version = release(36)
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "dev.mobile.tpsae"
@@ -18,7 +18,6 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
-
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -72,12 +71,5 @@ dependencies {
     implementation(libs.ktor.client.content.negotiation)
     implementation(libs.ktor.serialization.kotlinx.json)
 
-    implementation(libs.androidx.lifecycle.viewmodel.compose)
-    implementation(libs.androidx.lifecycle.runtime.compose)
-
     implementation(libs.coil.compose)
-
-
-
-
 }
