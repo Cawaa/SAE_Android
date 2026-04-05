@@ -70,15 +70,12 @@ fun MovieDetailScreen(movie: Movie, onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(movie.title, maxLines = 1) },
+                title = { Text("Détails du film") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Retour")
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                )
+                }
             )
         }
     ) { padding ->
@@ -88,80 +85,43 @@ fun MovieDetailScreen(movie: Movie, onBack: () -> Unit) {
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
         ) {
-            // Image de fond en haut
+            // Grande image de couverture classique
             AsyncImage(
-                model              = "${TmdbApi.BACKDROP_BASE_URL}${movie.backdropPath ?: movie.posterPath}",
-                contentDescription = "Backdrop de ${movie.title}",
-                modifier           = Modifier
+                model = "${TmdbApi.BACKDROP_BASE_URL}${movie.backdropPath ?: movie.posterPath}",
+                contentDescription = null,
+                modifier = Modifier
                     .fillMaxWidth()
-                    .height(220.dp),
+                    .height(240.dp),
                 contentScale = ContentScale.Crop
             )
 
+            // Informations textuelles structurées simplement
             Column(modifier = Modifier.padding(16.dp)) {
-                Row(
-                    modifier                = Modifier.fillMaxWidth(),
-                    horizontalArrangement   = Arrangement.spacedBy(12.dp),
-                    verticalAlignment       = Alignment.Top
-                ) {
-                    // Miniature de l'affiche
-                    AsyncImage(
-                        model              = "${TmdbApi.IMAGE_BASE_URL}${movie.posterPath}",
-                        contentDescription = null,
-                        modifier           = Modifier
-                            .width(90.dp)
-                            .height(135.dp)
-                            .clip(RoundedCornerShape(8.dp)),
-                        contentScale = ContentScale.Crop
-                    )
+                Text(
+                    text = movie.title,
+                    style = MaterialTheme.typography.headlineMedium
+                )
 
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text       = movie.title,
-                            style      = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold
-                        )
+                Spacer(modifier = Modifier.height(12.dp))
 
-                        movie.releaseDate?.let {
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text  = "📅 $it",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector        = Icons.Default.Star,
-                                contentDescription = "Note",
-                                tint               = Color(0xFFFFC107)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text       = String.format("%.1f / 10", movie.voteAverage),
-                                style      = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(text = "Note : ${String.format("%.1f", movie.voteAverage)}/10")
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Text(text = "Date de sortie : ${movie.releaseDate ?: "Inconnue"}")
                 }
 
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(24.dp))
                 HorizontalDivider()
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
                 Text(
-                    text       = "Synopsis",
-                    style      = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    text = "Synopsis",
+                    style = MaterialTheme.typography.titleLarge
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text  = movie.overview.ifBlank { "Aucun synopsis disponible." },
-                    style = MaterialTheme.typography.bodyMedium
+                    text = movie.overview.ifBlank { "Aucun synopsis disponible pour ce film." },
+                    style = MaterialTheme.typography.bodyLarge
                 )
             }
         }

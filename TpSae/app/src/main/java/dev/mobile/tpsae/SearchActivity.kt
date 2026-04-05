@@ -5,20 +5,20 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.mobile.tpsae.ui.components.AppBottomNavBar
+import dev.mobile.tpsae.ui.components.CategorySelector
+import dev.mobile.tpsae.ui.components.SearchBar
 import dev.mobile.tpsae.ui.screens.MovieListContent
 import dev.mobile.tpsae.ui.theme.TpSaeTheme
 import dev.mobile.tpsae.viewmodel.MainViewModel
-import dev.mobile.tpsae.viewmodel.MovieCategory
 
-class MainActivity : ComponentActivity() {
+class SearchActivity : ComponentActivity() {
     private val viewModel: MainViewModel by viewModels()
 
     @OptIn(ExperimentalMaterial3Api::class)
@@ -27,24 +27,32 @@ class MainActivity : ComponentActivity() {
         setContent {
             TpSaeTheme {
                 val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-
-                LaunchedEffect(Unit) {
-                    viewModel.onSearchQueryChanged("")
-                    viewModel.onCategoryChanged(MovieCategory.POPULAR)
-                }
+                val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
+                val category by viewModel.category.collectAsStateWithLifecycle()
 
                 Scaffold(
                     topBar = {
-                        TopAppBar(title = { Text("Films du moment") })
+                        TopAppBar(title = { Text("Recherche") })
                     },
                     // Ajout de la barre de navigation en bas
-                    bottomBar = { AppBottomNavBar(currentScreen = "Home") }
+                    bottomBar = { AppBottomNavBar(currentScreen = "Search") }
                 ) { padding ->
-                    Box(modifier = Modifier.padding(padding)) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(padding)
+                            .padding(horizontal = 16.dp)
+                    ) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        SearchBar(query = searchQuery, onQueryChange = viewModel::onSearchQueryChanged)
+                        Spacer(modifier = Modifier.height(12.dp))
+                        CategorySelector(selectedCategory = category, onCategorySelected = viewModel::onCategoryChanged)
+                        Spacer(modifier = Modifier.height(12.dp))
+
                         MovieListContent(
                             uiState = uiState,
                             onMovieClick = { movie ->
-                                val intent = Intent(this@MainActivity, DetailActivity::class.java).apply {
+                                val intent = Intent(this@SearchActivity, DetailActivity::class.java).apply {
                                     putExtra(DetailActivity.EXTRA_MOVIE, movie)
                                 }
                                 startActivity(intent)

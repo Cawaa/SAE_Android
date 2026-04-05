@@ -20,6 +20,15 @@ import coil.compose.AsyncImage
 import dev.mobile.tpsae.data.TmdbApi
 import dev.mobile.tpsae.model.Movie
 import dev.mobile.tpsae.viewmodel.MovieCategory
+import android.content.Intent
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Text
+import androidx.compose.ui.platform.LocalContext
+import dev.mobile.tpsae.MainActivity
+import dev.mobile.tpsae.SearchActivity
 
 /**
  * Carte d'un film affichée dans la LazyColumn.
@@ -144,5 +153,41 @@ fun CategorySelector(
                 label    = { Text(label) }
             )
         }
+    }
+}
+
+@Composable
+fun AppBottomNavBar(currentScreen: String) {
+    val context = LocalContext.current
+
+    NavigationBar {
+        // Bouton Accueil
+        NavigationBarItem(
+            icon = { Icon(Icons.Default.Home, contentDescription = "Accueil") },
+            label = { Text("Accueil") },
+            selected = currentScreen == "Home",
+            onClick = {
+                if (currentScreen != "Home") {
+                    val intent = Intent(context, MainActivity::class.java).apply {
+                        flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                    }
+                    context.startActivity(intent)
+                }
+            }
+        )
+        // Bouton Recherche
+        NavigationBarItem(
+            icon = { Icon(Icons.Default.Search, contentDescription = "Recherche") },
+            label = { Text("Recherche") },
+            selected = currentScreen == "Search",
+            onClick = {
+                if (currentScreen != "Search") {
+                    val intent = Intent(context, SearchActivity::class.java).apply {
+                        flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                    }
+                    context.startActivity(intent)
+                }
+            }
+        )
     }
 }

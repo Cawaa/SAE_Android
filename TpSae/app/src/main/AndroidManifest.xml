@@ -33,6 +33,8 @@
             android:exported="false"
             android:theme="@style/Theme.TpSae" />
 
+        <activity android:name=".SearchActivity" />
+
         </application>
 
 
