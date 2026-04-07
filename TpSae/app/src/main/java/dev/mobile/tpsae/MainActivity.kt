@@ -24,8 +24,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.mobile.tpsae.ui.components.AppBottomNavBar
 import dev.mobile.tpsae.ui.components.CategorySelector
+import dev.mobile.tpsae.ui.components.ThemeToggleButton
 import dev.mobile.tpsae.ui.screens.MovieListContent
 import dev.mobile.tpsae.ui.theme.TpSaeTheme
+import dev.mobile.tpsae.ui.theme.ThemePreferences
 import dev.mobile.tpsae.viewmodel.MainViewModel
 import dev.mobile.tpsae.viewmodel.MovieCategory
 
@@ -35,8 +37,11 @@ class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        ThemePreferences.init(this)
         setContent {
-            TpSaeTheme {
+            val isDarkTheme by ThemePreferences.darkTheme.collectAsStateWithLifecycle()
+
+            TpSaeTheme(darkTheme = isDarkTheme) {
                 val uiState by viewModel.uiState.collectAsStateWithLifecycle()
                 val selectedCategory by viewModel.category.collectAsStateWithLifecycle()
 
@@ -52,7 +57,13 @@ class MainActivity : ComponentActivity() {
                             colors = TopAppBarDefaults.topAppBarColors(
                                 containerColor = MaterialTheme.colorScheme.secondaryContainer,
                                 titleContentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
+                            ),
+                            actions = {
+                                ThemeToggleButton(
+                                    isDarkTheme = isDarkTheme,
+                                    onToggle = { ThemePreferences.toggle(this@MainActivity) }
+                                )
+                            }
                         )
                     },
                     // Ajout de la barre de navigation en bas

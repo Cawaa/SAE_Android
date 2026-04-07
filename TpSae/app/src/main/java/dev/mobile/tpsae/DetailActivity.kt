@@ -7,24 +7,24 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import dev.mobile.tpsae.data.TmdbApi
 import dev.mobile.tpsae.model.Movie
+import dev.mobile.tpsae.ui.components.ThemeToggleButton
 import dev.mobile.tpsae.ui.theme.TpSaeTheme
+import dev.mobile.tpsae.ui.theme.ThemePreferences
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import java.util.Locale
 
 /**
  * Deuxième activité : affiche le détail d'un film.
@@ -39,6 +39,7 @@ class DetailActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        ThemePreferences.init(this)
 
         // Récupération compatible API 33+ et versions antérieures
         val movie: Movie? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -49,9 +50,16 @@ class DetailActivity : ComponentActivity() {
         }
 
         setContent {
-            TpSaeTheme {
+            val isDarkTheme by ThemePreferences.darkTheme.collectAsStateWithLifecycle()
+
+            TpSaeTheme(darkTheme = isDarkTheme) {
                 if (movie != null) {
-                    MovieDetailScreen(movie = movie, onBack = { finish() })
+                    MovieDetailScreen(
+                        movie = movie,
+                        onBack = { finish() },
+                        isDarkTheme = isDarkTheme,
+                        onToggleTheme = { ThemePreferences.toggle(this@DetailActivity) }
+                    )
                 } else {
                     Text("Film introuvable.", modifier = Modifier.padding(16.dp))
                 }
@@ -66,7 +74,12 @@ class DetailActivity : ComponentActivity() {
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MovieDetailScreen(movie: Movie, onBack: () -> Unit) {
+fun MovieDetailScreen(
+    movie: Movie,
+    onBack: () -> Unit,
+    isDarkTheme: Boolean,
+    onToggleTheme: () -> Unit
+) {
     Scaffold(
         topBar = {
             TopAppBar(
@@ -75,6 +88,12 @@ fun MovieDetailScreen(movie: Movie, onBack: () -> Unit) {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Retour")
                     }
+                },
+                actions = {
+                    ThemeToggleButton(
+                        isDarkTheme = isDarkTheme,
+                        onToggle = onToggleTheme
+                    )
                 }
             )
         }
@@ -105,7 +124,7 @@ fun MovieDetailScreen(movie: Movie, onBack: () -> Unit) {
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(text = "Note : ${String.format("%.1f", movie.voteAverage)}/10")
+                    Text(text = "Note : ${String.format(Locale.getDefault(), "%.1f", movie.voteAverage)}/10")
                     Spacer(modifier = Modifier.width(16.dp))
                     Text(text = "Date de sortie : ${movie.releaseDate ?: "Inconnue"}")
                 }

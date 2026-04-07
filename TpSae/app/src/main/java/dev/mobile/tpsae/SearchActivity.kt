@@ -15,8 +15,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.mobile.tpsae.ui.components.AppBottomNavBar
 import dev.mobile.tpsae.ui.components.SearchBar
 import dev.mobile.tpsae.ui.components.FilterControls
+import dev.mobile.tpsae.ui.components.ThemeToggleButton
 import dev.mobile.tpsae.ui.screens.MovieListContent
 import dev.mobile.tpsae.ui.theme.TpSaeTheme
+import dev.mobile.tpsae.ui.theme.ThemePreferences
 import dev.mobile.tpsae.viewmodel.MainViewModel
 
 class SearchActivity : ComponentActivity() {
@@ -25,8 +27,11 @@ class SearchActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        ThemePreferences.init(this)
         setContent {
-            TpSaeTheme {
+            val isDarkTheme by ThemePreferences.darkTheme.collectAsStateWithLifecycle()
+
+            TpSaeTheme(darkTheme = isDarkTheme) {
                 val uiState by viewModel.uiState.collectAsStateWithLifecycle()
                 val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
                 val availableYears by viewModel.availableYears.collectAsStateWithLifecycle()
@@ -42,7 +47,15 @@ class SearchActivity : ComponentActivity() {
 
                 Scaffold(
                     topBar = {
-                        TopAppBar(title = { Text("Recherche") })
+                        TopAppBar(
+                            title = { Text("Recherche") },
+                            actions = {
+                                ThemeToggleButton(
+                                    isDarkTheme = isDarkTheme,
+                                    onToggle = { ThemePreferences.toggle(this@SearchActivity) }
+                                )
+                            }
+                        )
                     },
                     // Ajout de la barre de navigation en bas
                     bottomBar = { AppBottomNavBar(currentScreen = "Search") }
