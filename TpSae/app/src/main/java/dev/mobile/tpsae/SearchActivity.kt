@@ -12,8 +12,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.mobile.tpsae.ui.components.AppBottomNavBar
-import dev.mobile.tpsae.ui.components.CategorySelector
 import dev.mobile.tpsae.ui.components.SearchBar
+import dev.mobile.tpsae.ui.components.FilterControls
 import dev.mobile.tpsae.ui.screens.MovieListContent
 import dev.mobile.tpsae.ui.theme.TpSaeTheme
 import dev.mobile.tpsae.viewmodel.MainViewModel
@@ -28,7 +28,12 @@ class SearchActivity : ComponentActivity() {
             TpSaeTheme {
                 val uiState by viewModel.uiState.collectAsStateWithLifecycle()
                 val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
-                val category by viewModel.category.collectAsStateWithLifecycle()
+                val availableYears by viewModel.availableYears.collectAsStateWithLifecycle()
+                val availableGenres by viewModel.availableGenres.collectAsStateWithLifecycle()
+                val selectedYear by viewModel.selectedYear.collectAsStateWithLifecycle()
+                val selectedGenreId by viewModel.selectedGenreId.collectAsStateWithLifecycle()
+                val minRating by viewModel.minRating.collectAsStateWithLifecycle()
+                val orderBy by viewModel.orderBy.collectAsStateWithLifecycle()
 
                 Scaffold(
                     topBar = {
@@ -46,7 +51,18 @@ class SearchActivity : ComponentActivity() {
                         Spacer(modifier = Modifier.height(16.dp))
                         SearchBar(query = searchQuery, onQueryChange = viewModel::onSearchQueryChanged)
                         Spacer(modifier = Modifier.height(12.dp))
-                        CategorySelector(selectedCategory = category, onCategorySelected = viewModel::onCategoryChanged)
+                        FilterControls(
+                            years = availableYears,
+                            genres = availableGenres,
+                            selectedYear = selectedYear,
+                            selectedGenreId = selectedGenreId,
+                            minRating = minRating,
+                            orderBy = orderBy,
+                            onYearChange = viewModel::onYearFilterChanged,
+                            onGenreChange = viewModel::onGenreFilterChanged,
+                            onMinRatingChange = viewModel::onMinRatingChanged,
+                            onOrderByChange = viewModel::onOrderByChanged
+                        )
                         Spacer(modifier = Modifier.height(12.dp))
 
                         MovieListContent(

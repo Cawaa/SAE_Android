@@ -8,6 +8,10 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -20,6 +24,8 @@ import coil.compose.AsyncImage
 import dev.mobile.tpsae.data.TmdbApi
 import dev.mobile.tpsae.model.Movie
 import dev.mobile.tpsae.viewmodel.MovieCategory
+import dev.mobile.tpsae.viewmodel.GenreOption
+import dev.mobile.tpsae.viewmodel.OrderBy
 import android.content.Intent
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.Icon
@@ -152,6 +158,148 @@ fun CategorySelector(
                 onClick  = { onCategorySelected(cat) },
                 label    = { Text(label) }
             )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FilterControls(
+    years: List<Int>,
+    genres: List<GenreOption>,
+    selectedYear: Int?,
+    selectedGenreId: Int?,
+    minRating: Float,
+    orderBy: OrderBy,
+    onYearChange: (Int?) -> Unit,
+    onGenreChange: (Int?) -> Unit,
+    onMinRatingChange: (Float) -> Unit,
+    onOrderByChange: (OrderBy) -> Unit
+) {
+    var yearExpanded by remember { mutableStateOf(false) }
+    var genreExpanded by remember { mutableStateOf(false) }
+    var orderExpanded by remember { mutableStateOf(false) }
+
+    val yearLabel = selectedYear?.toString() ?: "Toutes"
+    val genreLabel = genres.firstOrNull { it.id == selectedGenreId }?.label ?: "Tous"
+    val orderOptions = listOf(
+        OrderBy.DATE to "Date",
+        OrderBy.RATING to "Note"
+    )
+    val orderLabel = orderOptions.firstOrNull { it.first == orderBy }?.second ?: "Date"
+
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        ExposedDropdownMenuBox(
+            expanded = yearExpanded,
+            onExpandedChange = { yearExpanded = !yearExpanded }
+        ) {
+            OutlinedTextField(
+                value = yearLabel,
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("Date") },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = yearExpanded) },
+                modifier = Modifier
+                    .menuAnchor()
+                    .fillMaxWidth()
+            )
+            ExposedDropdownMenu(
+                expanded = yearExpanded,
+                onDismissRequest = { yearExpanded = false }
+            ) {
+                DropdownMenuItem(
+                    text = { Text("Toutes") },
+                    onClick = {
+                        yearExpanded = false
+                        onYearChange(null)
+                    }
+                )
+                years.forEach { year ->
+                    DropdownMenuItem(
+                        text = { Text(year.toString()) },
+                        onClick = {
+                            yearExpanded = false
+                            onYearChange(year)
+                        }
+                    )
+                }
+            }
+        }
+
+        ExposedDropdownMenuBox(
+            expanded = genreExpanded,
+            onExpandedChange = { genreExpanded = !genreExpanded }
+        ) {
+            OutlinedTextField(
+                value = genreLabel,
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("Genre") },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = genreExpanded) },
+                modifier = Modifier
+                    .menuAnchor()
+                    .fillMaxWidth()
+            )
+            ExposedDropdownMenu(
+                expanded = genreExpanded,
+                onDismissRequest = { genreExpanded = false }
+            ) {
+                DropdownMenuItem(
+                    text = { Text("Tous") },
+                    onClick = {
+                        genreExpanded = false
+                        onGenreChange(null)
+                    }
+                )
+                genres.forEach { option ->
+                    DropdownMenuItem(
+                        text = { Text(option.label) },
+                        onClick = {
+                            genreExpanded = false
+                            onGenreChange(option.id)
+                        }
+                    )
+                }
+            }
+        }
+
+        Column {
+            Text("Note minimum: ${String.format("%.1f", minRating)}")
+            Slider(
+                value = minRating,
+                onValueChange = onMinRatingChange,
+                valueRange = 0f..10f
+            )
+        }
+
+        ExposedDropdownMenuBox(
+            expanded = orderExpanded,
+            onExpandedChange = { orderExpanded = !orderExpanded }
+        ) {
+            OutlinedTextField(
+                value = orderLabel,
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("Ordre") },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = orderExpanded) },
+                modifier = Modifier
+                    .menuAnchor()
+                    .fillMaxWidth()
+            )
+            ExposedDropdownMenu(
+                expanded = orderExpanded,
+                onDismissRequest = { orderExpanded = false }
+            ) {
+                orderOptions.forEach { (value, label) ->
+                    DropdownMenuItem(
+                        text = { Text(label) },
+                        onClick = {
+                            orderExpanded = false
+                            onOrderByChange(value)
+                        }
+                    )
+                }
+            }
         }
     }
 }

@@ -1,6 +1,6 @@
 package dev.mobile.tpsae.data
 
-import dev.mobile.tpsae.model.Movie
+import dev.mobile.tpsae.model.MovieDetail
 import dev.mobile.tpsae.model.MovieResponse
 import io.ktor.client.call.*
 import io.ktor.client.request.*
@@ -44,6 +44,14 @@ class MovieRepository {
             parameter("api_key",  apiKey)
             parameter("language", "fr-FR")
             parameter("page",     page)
+        }.body()
+    }
+
+    /** Récupère le détail d'un film (runtime, genres, etc.). */
+    suspend fun getMovieDetails(movieId: Int): MovieDetail {
+        return client.get("$baseUrl/movie/$movieId") {
+            parameter("api_key",  apiKey)
+            parameter("language", "fr-FR")
         }.body()
     }
 }

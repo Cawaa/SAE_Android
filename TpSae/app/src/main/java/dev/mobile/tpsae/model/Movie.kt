@@ -27,6 +27,19 @@ data class Movie(
     val popularity: Double                                  = 0.0
 ) : Parcelable
 
+@Serializable
+data class MovieDetail(
+    val id: Int,
+    val runtime: Int? = null,
+    val genres: List<Genre> = emptyList()
+)
+
+@Serializable
+data class Genre(
+    val id: Int,
+    val name: String
+)
+
 /**
  * Enveloppe de la réponse paginée de l'API TMDB.
  * Ex: /movie/popular ou /search/movie renvoient cet objet.

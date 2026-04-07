@@ -18,6 +18,10 @@ sealed class MovieUiState {
 /** Catégorie de films sélectionnée. */
 enum class MovieCategory { POPULAR, TOP_RATED }
 
+enum class OrderBy { DATE, RATING }
+
+data class GenreOption(val id: Int, val label: String)
+
 /**
  * ViewModel principal.
  * Contient toute la logique métier, l'UI ne fait qu'observer les StateFlow.
@@ -38,6 +42,47 @@ class MainViewModel : ViewModel() {
     // Catégorie active (filtre)
     private val _category = MutableStateFlow(MovieCategory.POPULAR)
     val category: StateFlow<MovieCategory> = _category.asStateFlow()
+
+    private val _selectedYear = MutableStateFlow<Int?>(null)
+    val selectedYear: StateFlow<Int?> = _selectedYear.asStateFlow()
+
+    private val _selectedGenreId = MutableStateFlow<Int?>(null)
+    val selectedGenreId: StateFlow<Int?> = _selectedGenreId.asStateFlow()
+
+    private val _minRating = MutableStateFlow(0f)
+    val minRating: StateFlow<Float> = _minRating.asStateFlow()
+
+    private val _orderBy = MutableStateFlow(OrderBy.DATE)
+    val orderBy: StateFlow<OrderBy> = _orderBy.asStateFlow()
+
+    private val _availableYears = MutableStateFlow<List<Int>>(emptyList())
+    val availableYears: StateFlow<List<Int>> = _availableYears.asStateFlow()
+
+    private val _availableGenres = MutableStateFlow<List<GenreOption>>(emptyList())
+    val availableGenres: StateFlow<List<GenreOption>> = _availableGenres.asStateFlow()
+
+    private var currentMovies: List<Movie> = emptyList()
+    private val genreNamesById = mapOf(
+        28 to "Action",
+        12 to "Aventure",
+        16 to "Animation",
+        35 to "Comedie",
+        80 to "Crime",
+        99 to "Documentaire",
+        18 to "Drame",
+        10751 to "Famille",
+        14 to "Fantastique",
+        36 to "Histoire",
+        27 to "Horreur",
+        10402 to "Musique",
+        9648 to "Mystere",
+        10749 to "Romance",
+        878 to "Science-fiction",
+        10770 to "Telefilm",
+        53 to "Thriller",
+        10752 to "Guerre",
+        37 to "Western"
+    )
 
     init {
         // Debounce : attend 400ms après la dernière frappe avant d'appeler l'API
@@ -63,7 +108,9 @@ class MainViewModel : ViewModel() {
                     MovieCategory.POPULAR   -> repository.getPopularMovies()
                     MovieCategory.TOP_RATED -> repository.getTopRatedMovies()
                 }
-                _uiState.value = MovieUiState.Success(response.results)
+                currentMovies = response.results
+                updateAvailableFilters()
+                applyFiltersAndPublish()
             } catch (e: Exception) {
                 _uiState.value = MovieUiState.Error(e.message ?: "Erreur réseau")
             }
@@ -82,15 +129,105 @@ class MainViewModel : ViewModel() {
         loadMoviesByCategory()
     }
 
+    fun onYearFilterChanged(year: Int?) {
+        _selectedYear.value = year
+        applyFiltersAndPublish()
+    }
+
+    fun onGenreFilterChanged(genreId: Int?) {
+        _selectedGenreId.value = genreId
+        applyFiltersAndPublish()
+    }
+
+    fun onMinRatingChanged(value: Float) {
+        _minRating.value = value
+        applyFiltersAndPublish()
+    }
+
+    fun onOrderByChanged(value: OrderBy) {
+        _orderBy.value = value
+        applyFiltersAndPublish()
+    }
+
     private fun performSearch(query: String) {
         viewModelScope.launch {
             _uiState.value = MovieUiState.Loading
             try {
                 val response = repository.searchMovies(query)
-                _uiState.value = MovieUiState.Success(response.results)
+                currentMovies = response.results
+                updateAvailableFilters()
+                applyFiltersAndPublish()
             } catch (e: Exception) {
                 _uiState.value = MovieUiState.Error(e.message ?: "Erreur réseau")
             }
+        }
+    }
+
+    private fun applyFiltersAndPublish() {
+        if (currentMovies.isEmpty()) {
+            _uiState.value = MovieUiState.Success(emptyList())
+            return
+        }
+
+        val year = _selectedYear.value
+        val genreId = _selectedGenreId.value
+        val minRating = _minRating.value
+
+        var filtered = currentMovies
+        if (year != null) {
+            filtered = filtered.filter { it.releaseDate?.take(4)?.toIntOrNull() == year }
+        }
+        if (genreId != null) {
+            filtered = filtered.filter { it.genreIds.contains(genreId) }
+        }
+        if (minRating > 0f) {
+            filtered = filtered.filter { it.voteAverage >= minRating.toDouble() }
+        }
+
+        val ordered = when (_orderBy.value) {
+            OrderBy.DATE -> sortByDateDesc(filtered)
+            OrderBy.RATING -> sortByRatingDesc(filtered)
+        }
+
+        _uiState.value = MovieUiState.Success(ordered)
+    }
+
+    private fun sortByDateDesc(movies: List<Movie>): List<Movie> {
+        return movies.sortedWith(
+            compareBy<Movie> { releaseDateKey(it) == 0 }.thenByDescending { releaseDateKey(it) }
+        )
+    }
+
+    private fun sortByRatingDesc(movies: List<Movie>): List<Movie> {
+        return movies.sortedWith(
+            compareBy<Movie> { it.voteAverage <= 0.0 }.thenByDescending { it.voteAverage }
+        )
+    }
+
+    private fun releaseDateKey(movie: Movie): Int {
+        val value = movie.releaseDate?.replace("-", "")?.toIntOrNull() ?: 0
+        return value
+    }
+
+    private fun updateAvailableFilters() {
+        val years = currentMovies
+            .mapNotNull { it.releaseDate?.take(4)?.toIntOrNull() }
+            .distinct()
+            .sortedDescending()
+        _availableYears.value = years
+        if (_selectedYear.value != null && _selectedYear.value !in years) {
+            _selectedYear.value = null
+        }
+
+        val genreIds = currentMovies
+            .flatMap { it.genreIds }
+            .distinct()
+        val genres = genreIds
+            .map { id -> GenreOption(id, genreNamesById[id] ?: "Genre $id") }
+            .sortedBy { it.label }
+        _availableGenres.value = genres
+        if (_selectedGenreId.value != null && genreIds.none { it == _selectedGenreId.value }) {
+            _selectedGenreId.value = null
         }
     }
 }
