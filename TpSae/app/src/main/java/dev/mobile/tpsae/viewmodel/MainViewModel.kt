@@ -55,6 +55,8 @@ class MainViewModel : ViewModel() {
     private val _orderBy = MutableStateFlow(OrderBy.DATE)
     val orderBy: StateFlow<OrderBy> = _orderBy.asStateFlow()
 
+    private val _isGlobalSearchMode = MutableStateFlow(false)
+
     private val _availableYears = MutableStateFlow<List<Int>>(emptyList())
     val availableYears: StateFlow<List<Int>> = _availableYears.asStateFlow()
 
@@ -91,9 +93,14 @@ class MainViewModel : ViewModel() {
             _searchQuery
                 .debounce(400L)
                 .distinctUntilChanged()
-                .collect { query ->
-                    if (query.isBlank()) loadMoviesByCategory()
-                    else performSearch(query)
+                .collect {
+                    if (_isGlobalSearchMode.value) {
+                        refreshSearchResults()
+                    } else {
+                        val query = _searchQuery.value
+                        if (query.isBlank()) loadMoviesByCategory()
+                        else performSearch(query)
+                    }
                 }
         }
         loadMoviesByCategory()
@@ -101,6 +108,7 @@ class MainViewModel : ViewModel() {
 
     /** Charge les films selon la catégorie active. */
     fun loadMoviesByCategory() {
+        _isGlobalSearchMode.value = false
         viewModelScope.launch {
             _uiState.value = MovieUiState.Loading
             try {
@@ -109,7 +117,7 @@ class MainViewModel : ViewModel() {
                     MovieCategory.TOP_RATED -> repository.getTopRatedMovies()
                 }
                 currentMovies = response.results
-                updateAvailableFilters()
+                updateAvailableFilters(currentMovies)
                 applyFiltersAndPublish()
             } catch (e: Exception) {
                 _uiState.value = MovieUiState.Error(e.message ?: "Erreur réseau")
@@ -131,22 +139,28 @@ class MainViewModel : ViewModel() {
 
     fun onYearFilterChanged(year: Int?) {
         _selectedYear.value = year
-        applyFiltersAndPublish()
+        if (_isGlobalSearchMode.value) refreshSearchResults() else applyFiltersAndPublish()
     }
 
     fun onGenreFilterChanged(genreId: Int?) {
         _selectedGenreId.value = genreId
-        applyFiltersAndPublish()
+        if (_isGlobalSearchMode.value) refreshSearchResults() else applyFiltersAndPublish()
     }
 
     fun onMinRatingChanged(value: Float) {
         _minRating.value = value
-        applyFiltersAndPublish()
+        if (_isGlobalSearchMode.value) refreshSearchResults() else applyFiltersAndPublish()
     }
 
     fun onOrderByChanged(value: OrderBy) {
         _orderBy.value = value
-        applyFiltersAndPublish()
+        if (_isGlobalSearchMode.value) refreshSearchResults() else applyFiltersAndPublish()
+    }
+
+    /** Active le mode Recherche globale : filtres appliqués côté API sur toute la base TMDB. */
+    fun loadSearchCatalog() {
+        _isGlobalSearchMode.value = true
+        refreshSearchResults()
     }
 
     private fun performSearch(query: String) {
@@ -155,8 +169,55 @@ class MainViewModel : ViewModel() {
             try {
                 val response = repository.searchMovies(query)
                 currentMovies = response.results
-                updateAvailableFilters()
+                updateAvailableFilters(currentMovies)
                 applyFiltersAndPublish()
+            } catch (e: Exception) {
+                _uiState.value = MovieUiState.Error(e.message ?: "Erreur réseau")
+            }
+        }
+    }
+
+    private fun refreshSearchResults() {
+        viewModelScope.launch {
+            _uiState.value = MovieUiState.Loading
+            try {
+                val query = _searchQuery.value.trim()
+                if (query.isBlank()) {
+                    val sortBy = when (_orderBy.value) {
+                        OrderBy.DATE -> "primary_release_date.desc"
+                        OrderBy.RATING -> "vote_average.desc"
+                    }
+
+                    // Source de référence des options (année/genre) indépendante du tri actif.
+                    // On utilise un tri stable/large pour éviter que la liste des années ne
+                    // soit biaisée vers les pages les plus récentes quand l'ordre actif est DATE.
+                    val discoverCatalog = repository.discoverMoviesAcrossPages(
+                        maxPages = 5,
+                        sortBy = "popularity.desc"
+                    )
+                    updateAvailableFilters(discoverCatalog)
+
+                    val hasServerFilters = _selectedYear.value != null ||
+                        _selectedGenreId.value != null ||
+                        _minRating.value > 0f
+
+                    currentMovies = if (hasServerFilters) {
+                        repository.discoverMoviesAcrossPages(
+                            maxPages = 5,
+                            year = _selectedYear.value,
+                            genreId = _selectedGenreId.value,
+                            minRating = _minRating.value,
+                            sortBy = sortBy
+                        )
+                    } else {
+                        discoverCatalog
+                    }
+                } else {
+                    val searched = repository.searchMoviesAcrossPages(query, maxPages = 5)
+                    updateAvailableFilters(searched)
+                    currentMovies = applyLocalFilters(searched)
+                }
+                _uiState.value = MovieUiState.Success(currentMovies)
             } catch (e: Exception) {
                 _uiState.value = MovieUiState.Error(e.message ?: "Erreur réseau")
             }
@@ -169,11 +230,15 @@ class MainViewModel : ViewModel() {
             return
         }
 
+        _uiState.value = MovieUiState.Success(applyLocalFilters(currentMovies))
+    }
+
+    private fun applyLocalFilters(source: List<Movie>): List<Movie> {
         val year = _selectedYear.value
         val genreId = _selectedGenreId.value
         val minRating = _minRating.value
 
-        var filtered = currentMovies
+        var filtered = source
         if (year != null) {
             filtered = filtered.filter { it.releaseDate?.take(4)?.toIntOrNull() == year }
         }
@@ -184,12 +249,10 @@ class MainViewModel : ViewModel() {
             filtered = filtered.filter { it.voteAverage >= minRating.toDouble() }
         }
 
-        val ordered = when (_orderBy.value) {
+        return when (_orderBy.value) {
             OrderBy.DATE -> sortByDateDesc(filtered)
             OrderBy.RATING -> sortByRatingDesc(filtered)
         }
-
-        _uiState.value = MovieUiState.Success(ordered)
     }
 
     private fun sortByDateDesc(movies: List<Movie>): List<Movie> {
@@ -209,8 +272,8 @@ class MainViewModel : ViewModel() {
         return value
     }
 
-    private fun updateAvailableFilters() {
-        val years = currentMovies
+    private fun updateAvailableFilters(source: List<Movie>) {
+        val years = source
             .mapNotNull { it.releaseDate?.take(4)?.toIntOrNull() }
             .distinct()
             .sortedDescending()
@@ -219,7 +282,7 @@ class MainViewModel : ViewModel() {
             _selectedYear.value = null
         }
 
-        val genreIds = currentMovies
+        val genreIds = source
             .flatMap { it.genreIds }
             .distinct()
         val genres = genreIds

@@ -7,6 +7,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -34,6 +35,10 @@ class SearchActivity : ComponentActivity() {
                 val selectedGenreId by viewModel.selectedGenreId.collectAsStateWithLifecycle()
                 val minRating by viewModel.minRating.collectAsStateWithLifecycle()
                 val orderBy by viewModel.orderBy.collectAsStateWithLifecycle()
+
+                LaunchedEffect(Unit) {
+                    viewModel.loadSearchCatalog()
+                }
 
                 Scaffold(
                     topBar = {
@@ -73,7 +78,7 @@ class SearchActivity : ComponentActivity() {
                                 }
                                 startActivity(intent)
                             },
-                            onRetry = { viewModel.loadMoviesByCategory() }
+                            onRetry = { viewModel.loadSearchCatalog() }
                         )
                     }
                 }
