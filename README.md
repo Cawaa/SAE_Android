@@ -34,6 +34,20 @@ app/src/main/java/dev/mobile/tpsae/
 ```
 
 
+## Pour voir les logs dans le LogCat : 
+
+Remplacer dans apiTMDB : 
+```
+install(Logging) {
+            logger = object : Logger {
+                override fun log(message: String) {
+                    android.util.Log.d("KtorHttp", message)
+                }
+            }
+            level = LogLevel.HEADERS
+        }
+```
+
 Le but de cette SAÉ est de développer une application Android native (*déployable sur une machine de l'iut*) par sous-équipe de projet SAÉ (2-3 étudiants ; normalement 2 sous-équipes par équipe de SAÉ).
 Cette application devra :
 
